@@ -4,6 +4,30 @@ This repo aims to make it possible for you to obtain all the exam questions from
 
 ## Setting it Up
 
+### Using docker
+
+1. Make sure [docker](https://docs.docker.com/engine/install/) is installed on your system.
+2. Pull the docker image:
+
+```bash
+docker pull ghcr.io/thatonecodes/examtopics-downloader:latest
+```
+
+3\. Run the container:
+
+```bash
+docker run -d \
+ --name examtopics-downloader \
+ -p google -s devops \
+ -save-links -o output.md \
+ ghcr.io/thatonecodes/examtopics-downloader:latest
+```
+
+> [!NOTE]  
+> The built binary from the `Dockerfile` has the name `examtopicsdl`.
+
+### Building from Source
+
 1. First, you must install [Golang >= 1.24](https://go.dev/doc/install) from the offical website.
 2. Then, run `git clone https://github.com/thatonecodes/examtopics-downloader` in your terminal to clone the repo.
 3. `cd` into the directory: `cd examtopics-downloader`
