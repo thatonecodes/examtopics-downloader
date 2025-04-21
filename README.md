@@ -13,19 +13,64 @@ This repo aims to make it possible for you to obtain all the exam questions from
 
 ## Command Line Arguments
 
-```bash
+```
 Each command line argument you can provide when running the program:
 
   -c	Optionally include all the comment/discussion text
   -o string
     	Optional path of the file where the data will be outputted (default "examtopics_output.md")
   -p string
-    	Name of the exam provider (default -> google) (default "google")
+    	Name of the exam provider (default "google")
   -s string
     	String to grep for in discussion links (required)
   -save-links
     	Optional argument to save unique links to questions
 ```
+
+## Possible Arguments List
+
+### Exam Providers, `-p`
+
+| Provider (-p)    | View Exams                                                                     | Notes     |
+| ---------------- | ------------------------------------------------------------------------------ | --------- |
+| amazon           | [Amazon Exams](https://www.examtopics.com/exams/amazon/)                       | AWS Certs |
+| cisco            | [Cisco Exams](https://www.examtopics.com/exams/cisco/)                         |           |
+| comptia          | [CompTIA Exams](https://www.examtopics.com/exams/comptia/)                     |           |
+| salesforce       | [Salesforce Exams](https://www.examtopics.com/exams/salesforce/)               |           |
+| fortinet         | [Fortinet Exams](https://www.examtopics.com/exams/fortinet/)                   |           |
+| juniper          | [Juniper Exams](https://www.examtopics.com/exams/juniper/)                     |           |
+| isaca            | [ISACA Exams](https://www.examtopics.com/exams/isaca/)                         |           |
+| vmware           | [VMware Exams](https://www.examtopics.com/exams/vmware/)                       |           |
+| isc2             | [ISC2 Exams](https://www.examtopics.com/exams/isc2/)                           | CISSP etc |
+| servicenow       | [ServiceNow Exams](https://www.examtopics.com/exams/servicenow/)               |           |
+| google           | [Google Exams](https://www.examtopics.com/exams/google/)                       |           |
+| microsoft        | [Microsoft Exams](https://www.examtopics.com/exams/microsoft/)                 |           |
+| ec-council       | [EC-Council Exams](https://www.examtopics.com/exams/ec-council/)               | CEH etc   |
+| oracle           | [Oracle Exams](https://www.examtopics.com/exams/oracle/)                       |           |
+| paloaltonetworks | [Palo Alto Networks Exams](https://www.examtopics.com/exams/paloaltonetworks/) |           |
+
+> [!NOTE]  
+> The more the amount of exams/discussion the provider has, the longer it will take to scrape through the exams.
+
+### `-save-links` && `-output-save-links`
+
+This is a bool flag, so the default is that it's set to `false`, deactivated. If `-save-links` is false `-output-save-links` will do nothing.
+`-output-save-links` is a `string` which includes the output path for the saved links, default is `saved-links.txt`.
+
+### Grep String, `-s`
+
+The `-s` argument can take an exam ID (ex. 200-301) or a word, such as "devops". for example:
+
+```bash
+go run . -p google -s devops
+```
+
+would get all exams from the `google` provider containing the string `devops`.
+
+### Comments and output, `-c` && `-o`
+
+The `-c` argument is another bool flag, so it is defaultly set to false(as it creates a lot of noise in the `.md` file), but you can include it by adding the flag.
+`-o` is the output path, based on `os.create(path)`, in the current working directory.
 
 ## Example
 
