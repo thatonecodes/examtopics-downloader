@@ -1,3 +1,4 @@
 examtopics_output.md
 *.txt
 env/
+!examples/*

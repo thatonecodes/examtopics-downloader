@@ -16,28 +16,27 @@ docker pull ghcr.io/thatonecodes/examtopics-downloader:latest
 3\. Run the container:
 
 ```bash
-mkdir -p ./env/output # this is to save the output
-chmod -R 777 ./env/output
-
-docker run --rm \
+docker run -it \
   --name examtopics-downloader \
-  -v "$(pwd)/env/output:/app/output" \
   ghcr.io/thatonecodes/examtopics-downloader:latest \
   -p google -s devops \
-  -save-links -o /app/output/output.md
+  -save-links -o output.md
+docker cp examtopics-downloader:/app/output.md .
+docker cp examtopics-downloader:/app/saved-links.txt .
 ```
 
 > [!NOTE]  
 > If seeing `exec: format exec error` or warnings about unsuportted platforms, if you are on `linux/arm64`, modify the docker cmd to:
 
 ```bash
-docker run --rm \
+docker run -it \
   --name examtopics-downloader \
   --platform linux/arm64 \
-  -v "$(pwd)/env/output:/app/output" \
   ghcr.io/thatonecodes/examtopics-downloader:latest \
   -p google -s devops \
-  -save-links -o /app/output/output.md
+  -save-links -o output.md
+docker cp examtopics-downloader:/app/output.md .
+docker cp examtopics-downloader:/app/saved-links.txt .
 ```
 
 ### Using Dockerfile
@@ -152,7 +151,9 @@ https://www.examtopics.com/exams/google/shopping-advertising/
 https://www.examtopics.com/exams/google/video-advertising/
 ```
 
-## Example
+## [For outputted file examples, see the examples folder](examples/google_devops.md)
+
+## Demo
 
 So, you have installed `go` on your system, and you're inside of the working directory. Let's say you would like the questions for the cisco exam 200-301.
 
