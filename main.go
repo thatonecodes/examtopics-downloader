@@ -222,7 +222,7 @@ func startSpinner(done <-chan struct{}) {
 	for {
 		select {
 		case <-done:
-			fmt.Print("\rDone!                      \n")
+			fmt.Print("\r\n")
 			return
 		default:
 			fmt.Printf("\rScraping... %c ", chars[i%len(chars)])
@@ -239,6 +239,7 @@ func writeData(links []string, outputPath string, commentBool bool) {
 
 	results := make([]map[string]any, len(links))
 
+	fmt.Println("Started writing to files, please wait...")
 	for i, link := range links {
 		wg.Add(1)
 		url := fmt.Sprintf("https://www.examtopics.com%s", link)
@@ -334,7 +335,6 @@ func main() {
 		saveLinks(links)
 	}
 
-	fmt.Println("Ordered data! Writing to file in order, please wait...")
 	writeData(links, *outputPath, *commentBool)
 
 	fmt.Printf("Successfully saved output to %s.\n", *outputPath)

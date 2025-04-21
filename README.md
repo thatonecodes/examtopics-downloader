@@ -18,13 +18,19 @@ docker pull ghcr.io/thatonecodes/examtopics-downloader:latest
 ```bash
 docker run -d \
  --name examtopics-downloader \
+ ghcr.io/thatonecodes/examtopics-downloader:latest \
  -p google -s devops \
  -save-links -o output.md \
- ghcr.io/thatonecodes/examtopics-downloader:latest
 ```
 
 > [!NOTE]  
 > The built binary from the `Dockerfile` has the name `examtopicsdl`.
+
+### Using Dockerfile
+
+1. `git clone https://github.com/thatonecodes/examtopics-downloader` and make sure docker is installed on your system.
+2. Run `docker build -t examtopics-dl . && docker run --rm examtopics-dl -exams -p cisco`
+3. After setup, it will give you a list of exams with the `cisco` provider.
 
 ### Building from Source
 
