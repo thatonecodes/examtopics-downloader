@@ -147,6 +147,30 @@ func cleanText(raw string) string {
 	return cleaned
 }
 
+func getProviderExams(providerName string) []string {
+	baseURL := fmt.Sprintf("https://www.examtopics.com/exams/%s/", providerName)
+	resp, err := client.Get(baseURL)
+	if err != nil {
+		log.Fatalf("Failed to fetch URL: %v", err)
+	}
+	defer resp.Body.Close()
+
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		log.Fatalf("Failed to parse HTML: %v", err)
+	}
+
+	var allExams []string
+	doc.Find(".popular-exam-link").Each(func(i int, s *goquery.Selection) {
+		href, exists := s.Attr("href")
+		if exists {
+			allExams = append(allExams, cleanText(href))
+		}
+	})
+
+	return allExams
+}
+
 func getDataFromLink(link string) map[string]any {
 	resp, err := client.Get(link)
 	if err != nil {
@@ -211,9 +235,30 @@ func startSpinner(done <-chan struct{}) {
 func writeData(links []string, outputPath string, commentBool bool) {
 	const MaxConcurrentRequests = 15
 	var wg sync.WaitGroup
-	var mu sync.Mutex
 	sem := make(chan struct{}, MaxConcurrentRequests)
 
+	results := make([]map[string]any, len(links))
+
+	for i, link := range links {
+		wg.Add(1)
+		url := fmt.Sprintf("https://www.examtopics.com%s", link)
+
+		go func(i int, link, url string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			data := getDataFromLink(url)
+			if data == nil {
+				return
+			}
+			results[i] = data
+		}(i, link, url)
+	}
+
+	wg.Wait()
+
+	// Must write in order
 	file, err := os.Create(outputPath)
 	if err != nil {
 		panic(err)
@@ -222,44 +267,27 @@ func writeData(links []string, outputPath string, commentBool bool) {
 
 	fmt.Fprintf(file, "# Exam Topics Questions\n\n")
 	fmt.Fprintf(file, "@thatonecodes\n\n")
-	for _, link := range links {
-		wg.Add(1)
-		url := fmt.Sprintf("https://www.examtopics.com%s", link)
 
-		go func(link string) {
-			defer wg.Done()
-			data := getDataFromLink(link)
-			sem <- struct{}{}        // acquire
-			defer func() { <-sem }() // release
-			if data == nil {
-				return //skip if fetching fails
+	for _, data := range results {
+		if data == nil {
+			continue
+		}
+		fmt.Fprintf(file, "## %s\n\n", data["title"])
+		fmt.Fprintf(file, "%s\n\n", data["header"])
+		fmt.Fprintf(file, "%s\n\n", data["content"])
+		if questions, ok := data["questions"].([]string); ok {
+			for _, question := range questions {
+				fmt.Fprintf(file, "%v\n\n", question)
 			}
-
-			// Safely write to file
-			mu.Lock()
-			defer mu.Unlock()
-			fmt.Fprintf(file, "## %s\n\n", data["title"])
-			fmt.Fprintf(file, "%s\n\n", data["header"])
-			fmt.Fprintf(file, "%s\n\n", data["content"])
-			if questions, ok := data["questions"].([]string); ok {
-				for _, question := range questions {
-					fmt.Fprintf(file, "%v\n\n", question)
-				}
-			} else {
-				log.Fatalf("map is not []string. Answer parsing went wrong?")
-			}
-			fmt.Fprintf(file, "**Answer: %s**\n\n", data["answer"])
-			fmt.Fprintf(file, "**Timestamp: %s**\n\n", data["timestamp"])
-			fmt.Fprintf(file, "[View on ExamTopics](%s)\n\n", data["questionLink"])
-			if commentBool {
-				fmt.Fprintf(file, "Comments: %s\n", data["comments"])
-			}
-			fmt.Fprintf(file, "----------------------------------------\n\n")
-
-		}(url)
+		}
+		fmt.Fprintf(file, "**Answer: %s**\n\n", data["answer"])
+		fmt.Fprintf(file, "**Timestamp: %s**\n\n", data["timestamp"])
+		fmt.Fprintf(file, "[View on ExamTopics](%s)\n\n", data["questionLink"])
+		if commentBool {
+			fmt.Fprintf(file, "Comments: %s\n", data["comments"])
+		}
+		fmt.Fprintf(file, "----------------------------------------\n\n")
 	}
-
-	wg.Wait()
 }
 
 func saveLinks(links []string) {
@@ -279,8 +307,18 @@ func main() {
 	grepStr := flag.String("s", "", "String to grep for in discussion links (required)")
 	outputPath := flag.String("o", "examtopics_output.md", "Optional path of the file where the data will be outputted")
 	commentBool := flag.Bool("c", false, "Optionally include all the comment/discussion text")
+	examsFlag := flag.Bool("exams", false, "Optionally show all the possible exams for your selected provider and exit")
 	saveUrls := flag.Bool("save-links", false, "Optional argument to save unique links to questions")
 	flag.Parse()
+
+	if *examsFlag {
+		exams := getProviderExams(*provider)
+		fmt.Printf("Exams for provider '%s'\n\n", *provider)
+		for _, exam := range exams {
+			fmt.Printf("https://www.examtopics.com%s\n", exam)
+		}
+		os.Exit(0)
+	}
 
 	done := make(chan struct{})
 	go startSpinner(done)
@@ -291,9 +329,12 @@ func main() {
 
 	links := getAllPages(*provider, *grepStr)
 	close(done)
+
 	if *saveUrls {
 		saveLinks(links)
 	}
+
+	fmt.Println("Ordered data! Writing to file in order, please wait...")
 	writeData(links, *outputPath, *commentBool)
 
 	fmt.Printf("Successfully saved output to %s.\n", *outputPath)

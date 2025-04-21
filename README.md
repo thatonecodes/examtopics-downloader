@@ -17,6 +17,8 @@ This repo aims to make it possible for you to obtain all the exam questions from
 Each command line argument you can provide when running the program:
 
   -c	Optionally include all the comment/discussion text
+  -exams
+    	Optionally show all the possible exams for your selected provider and exit
   -o string
     	Optional path of the file where the data will be outputted (default "examtopics_output.md")
   -p string
@@ -71,6 +73,40 @@ would get all exams from the `google` provider containing the string `devops`.
 
 The `-c` argument is another bool flag, so it is defaultly set to false(as it creates a lot of noise in the `.md` file), but you can include it by adding the flag.
 `-o` is the output path, based on `os.create(path)`, in the current working directory.
+
+### Exams output, `-exams`
+
+This argument will display output defaulted to such as and exit immediately.
+
+```
+Exams for provider 'google'
+
+https://www.examtopics.com/exams/google/adwords-fundamentals/
+https://www.examtopics.com/exams/google/associate-android-developer/
+https://www.examtopics.com/exams/google/associate-cloud-engineer/
+https://www.examtopics.com/exams/google/associate-data-practitioner/
+https://www.examtopics.com/exams/google/associate-google-workspace-administrator/
+https://www.examtopics.com/exams/google/cloud-digital-leader/
+https://www.examtopics.com/exams/google/display-advertising/
+https://www.examtopics.com/exams/google/google-analytics/
+https://www.examtopics.com/exams/google/gsuite/
+https://www.examtopics.com/exams/google/individual-qualification/
+https://www.examtopics.com/exams/google/mobile-advertising/
+https://www.examtopics.com/exams/google/professional-chromeos-administrator/
+https://www.examtopics.com/exams/google/professional-cloud-architect/
+https://www.examtopics.com/exams/google/professional-cloud-database-engineer/
+https://www.examtopics.com/exams/google/professional-cloud-developer/
+https://www.examtopics.com/exams/google/professional-cloud-devops-engineer/
+https://www.examtopics.com/exams/google/professional-cloud-network-engineer/
+https://www.examtopics.com/exams/google/professional-cloud-security-engineer/
+https://www.examtopics.com/exams/google/professional-collaboration-engineer/
+https://www.examtopics.com/exams/google/professional-data-engineer/
+https://www.examtopics.com/exams/google/professional-google-workspace-administrator/
+https://www.examtopics.com/exams/google/professional-machine-learning-engineer/
+https://www.examtopics.com/exams/google/search-advertising/
+https://www.examtopics.com/exams/google/shopping-advertising/
+https://www.examtopics.com/exams/google/video-advertising/
+```
 
 ## Example
 
