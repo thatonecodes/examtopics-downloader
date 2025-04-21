@@ -17,7 +17,7 @@ WORKDIR /app
 
 # Install CA certs
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
-
+RUN mkdir -p /app/output && chmod 777 /app/output
 COPY --from=builder /app/examtopicsdl .
 
 ENTRYPOINT ["./examtopicsdl"]

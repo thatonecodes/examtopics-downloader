@@ -16,20 +16,34 @@ docker pull ghcr.io/thatonecodes/examtopics-downloader:latest
 3\. Run the container:
 
 ```bash
-docker run -d \
- --name examtopics-downloader \
- ghcr.io/thatonecodes/examtopics-downloader:latest \
- -p google -s devops \
- -save-links -o output.md \
+mkdir -p ./env/output # this is to save the output
+chmod -R 777 ./env/output
+
+docker run --rm \
+  --name examtopics-downloader \
+  -v "$(pwd)/env/output:/app/output" \
+  ghcr.io/thatonecodes/examtopics-downloader:latest \
+  -p google -s devops \
+  -save-links -o /app/output/output.md
 ```
 
 > [!NOTE]  
-> The built binary from the `Dockerfile` has the name `examtopicsdl`.
+> If seeing `exec: format exec error` or warnings about unsuportted platforms, if you are on `linux/arm64`, modify the docker cmd to:
+
+```bash
+docker run --rm \
+  --name examtopics-downloader \
+  --platform linux/arm64 \
+  -v "$(pwd)/env/output:/app/output" \
+  ghcr.io/thatonecodes/examtopics-downloader:latest \
+  -p google -s devops \
+  -save-links -o /app/output/output.md
+```
 
 ### Using Dockerfile
 
 1. `git clone https://github.com/thatonecodes/examtopics-downloader` and make sure docker is installed on your system.
-2. Run `docker build -t examtopics-dl . && docker run --rm examtopics-dl -exams -p cisco`
+2. Run `docker build -t examtopics-dl . && docker run --rm examtopics-dl -p google -s devops -save-links -o output.md`
 3. After setup, it will give you a list of exams with the `cisco` provider.
 
 ### Building from Source
@@ -37,7 +51,7 @@ docker run -d \
 1. First, you must install [Golang >= 1.24](https://go.dev/doc/install) from the offical website.
 2. Then, run `git clone https://github.com/thatonecodes/examtopics-downloader` in your terminal to clone the repo.
 3. `cd` into the directory: `cd examtopics-downloader`
-4. You can now run: `go run . (args...)`
+4. You can now run: `go run . -p cisco -exams`
 
 (there will be compiled binaries in the future)
 
