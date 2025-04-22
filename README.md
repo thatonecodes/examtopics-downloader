@@ -23,6 +23,7 @@ docker run -it \
   -save-links -o output.md
 docker cp examtopics-downloader:/app/output.md .
 docker cp examtopics-downloader:/app/saved-links.txt .
+docker rm examtopics-downloader
 ```
 
 > [!NOTE]  
@@ -37,6 +38,7 @@ docker run -it \
   -save-links -o output.md
 docker cp examtopics-downloader:/app/output.md .
 docker cp examtopics-downloader:/app/saved-links.txt .
+docker rm examtopics-downloader
 ```
 
 ### Using Dockerfile
@@ -50,7 +52,7 @@ docker cp examtopics-downloader:/app/saved-links.txt .
 1. First, you must install [Golang >= 1.24](https://go.dev/doc/install) from the offical website.
 2. Then, run `git clone https://github.com/thatonecodes/examtopics-downloader` in your terminal to clone the repo.
 3. `cd` into the directory: `cd examtopics-downloader`
-4. You can now run: `go run . -p cisco -exams`
+4. You can now run: `go run ./cmd/main.go -p cisco -exams`
 
 (there will be compiled binaries in the future)
 
