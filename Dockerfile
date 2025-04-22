@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY . ./
 
-RUN go build -o examtopicsdl ./main.go
+RUN go build -o examtopicsdl ./cmd/main.go
 
 FROM debian:bookworm-slim
 

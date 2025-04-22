@@ -1,0 +1,28 @@
+name: Run Build and Tests
+
+on:
+  push:
+    paths:
+      - "**.go"
+      - "go.mod"
+      - ".github/workflows/go-tests.yml"
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Build project
+        run: go build ./...
+
+      - name: Run tests
+        run: go test -v ./tests
