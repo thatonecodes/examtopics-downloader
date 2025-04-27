@@ -17,28 +17,41 @@ import (
 var client = &http.Client{Timeout: constants.HttpTimeout}
 
 func FetchURL(url string, client http.Client) []byte {
-	resp, err := client.Get(url)
-	if err != nil {
-		log.Printf("failed to fetch URL: %v", err)
-		return nil
-	}
-	defer resp.Body.Close()
+	backoff := constants.InitalBackoff
 
-	if resp.StatusCode == http.StatusServiceUnavailable {
-		log.Printf("503 error for url: %s", url)
-		return nil
-	} else if resp.StatusCode != http.StatusOK {
-		log.Printf("request failed with status code: %d", resp.StatusCode)
-		return nil
+	for attempt := 0; attempt <= constants.MaxRetries; attempt++ {
+		if attempt > 0 {
+			delay := utils.DelayTime(backoff)
+			log.Printf("Retry attempt %d for URL: %s after waiting %v", attempt, url, delay)
+			utils.Sleep(delay)
+			backoff = utils.BackoffTime(backoff, constants.BackoffFactor)
+		}
+
+		resp, err := client.Get(url)
+		if err != nil {
+			log.Printf("failed to fetch URL (attempt %d): %v", attempt, err)
+			continue
+		}
+
+		if resp.StatusCode == http.StatusOK {
+			body, err := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if err != nil {
+				log.Printf("failed to read response body: %v", err)
+				return nil
+			}
+			return body
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode != http.StatusServiceUnavailable {
+			log.Printf("request failed with status code: %d", resp.StatusCode)
+			return nil
+		}
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("failed to read response body: %v", err)
-		return nil
-	}
-
-	return body
+	log.Printf("exhausted retries for URL: %s", url)
+	return nil
 }
 
 func ParseHTML(url string, client http.Client) (*goquery.Document, error) {
@@ -59,7 +72,7 @@ func ParseHTML(url string, client http.Client) (*goquery.Document, error) {
 func getMaxNumPages(url string) int {
 	doc, err := ParseHTML(url, *client)
 	if err != nil {
-		log.Printf("Failed parsing HTML for number of pages: %v", err)
+		log.Panicf("Failed parsing HTML for number of pages: %v", err)
 	}
 
 	var pageCount int

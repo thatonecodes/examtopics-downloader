@@ -2,12 +2,14 @@ package utils
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func CleanText(raw string) string {
@@ -88,4 +90,21 @@ func GrepString(baseString, searchString string) bool {
 
 func AddToBaseUrl(addString string) string {
 	return fmt.Sprintf("https://www.examtopics.com%s", addString)
+}
+
+func CreateRateLimiter(rps float64) *time.Ticker {
+	interval := time.Duration(float64(time.Second) / rps)
+	return time.NewTicker(interval)
+}
+
+func DelayTime(backoff time.Duration) time.Duration {
+	return backoff + time.Duration(rand.Intn(500))*time.Millisecond
+}
+
+func BackoffTime(backoff time.Duration, backoffFactor float64) time.Duration {
+	return time.Duration(float64(backoff) * backoffFactor)
+}
+
+func Sleep(seconds time.Duration) {
+	time.Sleep(seconds)
 }
