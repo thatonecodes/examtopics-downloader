@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"examtopics-downloader/internal/models"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
+	"path"
 	"regexp"
 	"runtime"
 	"sort"
@@ -107,4 +110,62 @@ func BackoffTime(backoff time.Duration, backoffFactor float64) time.Duration {
 
 func Sleep(seconds time.Duration) {
 	time.Sleep(seconds)
+}
+
+func SortCachedLinks(linksWithNumbers []models.FileInfo) []string {
+	sort.Slice(linksWithNumbers, func(i, j int) bool {
+		return linksWithNumbers[i].Number < linksWithNumbers[j].Number
+	})
+
+	// Collect sorted links
+	var sortedLinks []string
+	for _, linkWithNumber := range linksWithNumbers {
+		sortedLinks = append(sortedLinks, linkWithNumber.URL)
+	}
+	return sortedLinks
+}
+
+func ExtractNumberFromPath(filename string) int {
+	num := -1 // Default if no number found
+	parts := strings.Split(filename, "_")
+	if len(parts) > 1 {
+		numStr := strings.Split(parts[1], ".")[0]
+		parsedNum, err := strconv.Atoi(numStr)
+		if err == nil {
+			num = parsedNum
+		}
+	}
+	return num
+}
+
+func FilterOutNilData(results []*models.QuestionData) []models.QuestionData {
+	var finalData []models.QuestionData
+	for _, entry := range results {
+		if entry != nil {
+			finalData = append(finalData, *entry)
+		}
+	}
+	return finalData
+}
+
+func CapitalizeFirstLetter(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return strings.ToUpper(string(s[0])) + s[1:]
+}
+
+func NewGitHubClient(token string) *http.Client {
+	return &http.Client{
+		Transport: &models.AuthTransport{
+			Token:     token,
+			Transport: http.DefaultTransport,
+		},
+	}
+}
+
+func GetNameFromLink(link string) string {
+	name := strings.TrimSuffix(path.Base(link), ".json")
+	name = strings.ReplaceAll(name, "-", " ")
+	return strings.Join(strings.Fields(name), " ")
 }

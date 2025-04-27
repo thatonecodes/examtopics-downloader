@@ -2,15 +2,19 @@ package fetch
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	"examtopics-downloader/internal/constants"
+	"examtopics-downloader/internal/models"
 	"examtopics-downloader/internal/utils"
+
 	"github.com/PuerkitoBio/goquery"
 )
 
@@ -125,4 +129,72 @@ func getLinksFromPage(url string, grepStr string) []string {
 	})
 
 	return matchingLinks
+}
+
+func FetchCachedLinks(providerName string, grepStr string, token string) []string {
+	baseURL := fmt.Sprintf("https://api.github.com/repos/thatonecodes/examtopics-data/contents/%s", utils.CapitalizeFirstLetter(providerName))
+	if token != "" {
+		client = utils.NewGitHubClient(token)
+	}
+	resp := FetchURL(baseURL, *client)
+
+	var content []models.FileInfo
+
+	if resp == nil {
+		log.Printf("the response body was nil, %v", resp)
+		return nil
+	}
+
+	err := json.Unmarshal(resp, &content)
+	if err != nil {
+		log.Fatalf("error unmarshaling response: %v", err)
+	}
+
+	var linksWithNumbers []models.FileInfo
+	for _, item := range content {
+		link := item.URL
+		number := utils.ExtractNumberFromPath(item.Name)
+		if utils.GrepString(link, grepStr) {
+			linksWithNumbers = append(linksWithNumbers, models.FileInfo{
+				URL:    link,
+				Name:   item.Name,
+				Number: number,
+			})
+		}
+	}
+
+	return utils.SortCachedLinks(linksWithNumbers)
+}
+
+func GetCachedPages(providerName string, grepStr string, token string) []models.QuestionData {
+	links := FetchCachedLinks(providerName, grepStr, token)
+	var allData []models.QuestionData
+
+	var wg sync.WaitGroup
+	dataChan := make(chan models.QuestionData)
+
+	for _, link := range links {
+		wg.Add(1)
+		go func(link string) {
+			defer wg.Done()
+			dataList := getJSONFromLink(link)
+			if dataList == nil {
+				return
+			}
+			for _, data := range dataList {
+				dataChan <- *data // send each QuestionData into the channel
+			}
+		}(link)
+	}
+
+	go func() {
+		wg.Wait()
+		close(dataChan)
+	}()
+
+	for data := range dataChan {
+		allData = append(allData, data)
+	}
+
+	return allData
 }
