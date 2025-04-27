@@ -127,16 +127,6 @@ The `-c` argument is another bool flag, so it is defaultly set to false(as it cr
 
 This argument will display output defaulted to such as and exit immediately.
 
-### Token Input, `-t`
-
-When you add you `Github` PAT, it allows for more requests to the API, (up to 5000) which is needed when scraping bigger things.
-The cached data helps you access big dumps faster.
-
-### No Cache Arg, `-no-cache`
-
-When you add this argument, it tells the program to ignore the cached `Github` repoitories of updated exam info, however the scraper will take longer than the cache.
-Useful when wanting to scrape realtime data.
-
 ```
 Exams for provider 'google'
 
@@ -166,6 +156,16 @@ https://www.examtopics.com/exams/google/search-advertising/
 https://www.examtopics.com/exams/google/shopping-advertising/
 https://www.examtopics.com/exams/google/video-advertising/
 ```
+
+### Token Input, `-t`
+
+When you add you `Github` PAT, it allows for more requests to the API, (up to 5000) which is needed when scraping bigger things.
+The cached data helps you access big dumps faster.
+
+### No Cache Arg, `-no-cache`
+
+When you add this argument, it tells the program to ignore the cached `Github` repoitories of updated exam info, however the scraper will take longer than the cache.
+Useful when wanting to scrape realtime data.
 
 ## [For outputted file examples, see the examples folder](examples/google_devops.md)
 

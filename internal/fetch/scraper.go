@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -87,8 +88,13 @@ func getJSONFromLink(link string) []*models.QuestionData {
 		}
 
 		var choicesHeader string
-		for key, value := range q.Choices {
-			choicesHeader += fmt.Sprintf("**%s:** %s\n\n", key, value)
+		var keys []string
+		for key := range q.Choices {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			choicesHeader += fmt.Sprintf("**%s:** %s\n\n", key, q.Choices[key])
 		}
 
 		name := utils.GetNameFromLink(link)
