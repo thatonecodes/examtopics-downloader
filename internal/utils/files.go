@@ -36,7 +36,10 @@ func WriteData(dataList []models.QuestionData, outputPath string, commentBool bo
 
 		fmt.Fprintf(file, "## %s\n\n", data.Title)
 		fmt.Fprintf(file, "%s\n\n", data.Header)
-		fmt.Fprintf(file, "%s\n\n", data.Content)
+
+		if data.Content != "" {
+			fmt.Fprintf(file, "%s\n\n", data.Content)
+		}
 
 		for _, question := range data.Questions {
 			fmt.Fprintf(file, "%s\n\n", question)
@@ -50,7 +53,7 @@ func WriteData(dataList []models.QuestionData, outputPath string, commentBool bo
 			fmt.Fprintf(file, "Comments: %s\n", data.Comments)
 		}
 
-		fmt.Fprintf(file, "----------------------------------------\n")
+		fmt.Fprintf(file, "----------------------------------------\n\n")
 	}
 }
 

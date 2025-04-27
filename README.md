@@ -64,14 +64,18 @@ Each command line argument you can provide when running the program:
   -c	Optionally include all the comment/discussion text
   -exams
     	Optionally show all the possible exams for your selected provider and exit
+  -no-cache
+    	Optional argument, set to disable looking through cached data on github
   -o string
     	Optional path of the file where the data will be outputted (default "examtopics_output.md")
   -p string
-    	Name of the exam provider (default "google")
+    	Name of the exam provider (default -> google) (default "google")
   -s string
     	String to grep for in discussion links (required)
   -save-links
     	Optional argument to save unique links to questions
+  -t string
+    	Optional argument to make cached requests faster to gh api
 ```
 
 ## Possible Arguments List
@@ -122,6 +126,16 @@ The `-c` argument is another bool flag, so it is defaultly set to false(as it cr
 ### Exams output, `-exams`
 
 This argument will display output defaulted to such as and exit immediately.
+
+### Token Input, `-t`
+
+When you add you `Github` PAT, it allows for more requests to the API, (up to 5000) which is needed when scraping bigger things.
+The cached data helps you access big dumps faster.
+
+### No Cache Arg, `-no-cache`
+
+When you add this argument, it tells the program to ignore the cached `Github` repoitories of updated exam info, however the scraper will take longer than the cache.
+Useful when wanting to scrape realtime data.
 
 ```
 Exams for provider 'google'
@@ -174,7 +188,7 @@ Successfully saved output to {OUTPUT_LOCATION}.
 ```
 
 If so, hooray, you have successfully saved all/most of the questions in a `.md` file!
-The format would be such as:
+The format would be such as (older, only scraping format):
 
 ```
 ----------------------------------------

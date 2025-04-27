@@ -1,8 +1,10 @@
 package fetch
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -41,6 +43,70 @@ func getDataFromLink(link string) *models.QuestionData {
 		QuestionLink: link,
 		Comments:     utils.CleanText(doc.Find(".discussion-container").Text()),
 	}
+}
+
+var counter int = 0 //start counter at 1
+func getJSONFromLink(link string) []*models.QuestionData {
+	initialResp := FetchURL(link, *client)
+
+	var githubResp map[string]any
+	err := json.Unmarshal(initialResp, &githubResp)
+	if err != nil {
+		log.Printf("error unmarshalling GitHub API response: %v", err)
+		return nil
+	}
+
+	downloadURL, ok := githubResp["download_url"].(string)
+	if !ok {
+		log.Printf("couldn't find download_url in GitHub API response")
+		return nil
+	}
+
+	jsonResp := FetchURL(downloadURL, *client)
+
+	var content models.JSONResponse
+	err = json.Unmarshal(jsonResp, &content)
+	if err != nil {
+		log.Printf("error unmarshalling the questions data: %v", err)
+		return nil
+	}
+
+	fmt.Println("Processing content from:", downloadURL)
+
+	var questions []*models.QuestionData
+
+	if content.PageProps.Questions == nil {
+		log.Printf("no questions found in JSON content")
+		return nil
+	}
+
+	for _, q := range content.PageProps.Questions {
+		var comments string
+		for _, discussion := range q.Discussion {
+			comments += fmt.Sprintf("[%s] %s\n", discussion.Poster, discussion.Content)
+		}
+
+		var choicesHeader string
+		for key, value := range q.Choices {
+			choicesHeader += fmt.Sprintf("**%s:** %s\n\n", key, value)
+		}
+
+		name := utils.GetNameFromLink(link)
+		counter++
+
+		questions = append(questions, &models.QuestionData{
+			Title:        "Examtopics " + strings.ReplaceAll(name, ".json?ref=main", "") + " question #" + strconv.Itoa(counter),
+			Header:       choicesHeader,
+			Content:      strings.Join(q.QuestionImages, "\n"),
+			Questions:    []string{q.QuestionText},
+			Answer:       q.Answer,
+			Timestamp:    q.Timestamp,
+			QuestionLink: q.URL,
+			Comments:     utils.CleanText(comments),
+		})
+	}
+
+	return questions
 }
 
 func fetchAllPageLinksConcurrently(providerName, grepStr string, numPages, concurrency int) []string {
