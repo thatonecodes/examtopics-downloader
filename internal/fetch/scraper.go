@@ -9,6 +9,7 @@ import (
 	"examtopics-downloader/internal/constants"
 	"examtopics-downloader/internal/models"
 	"examtopics-downloader/internal/utils"
+
 	"github.com/PuerkitoBio/goquery"
 )
 
@@ -47,12 +48,17 @@ func fetchAllPageLinksConcurrently(providerName, grepStr string, numPages, concu
 	sem := make(chan struct{}, concurrency)
 	results := make(chan []string, numPages)
 
+	rateLimiter := utils.CreateRateLimiter(constants.RequestsPerSecond)
+	defer rateLimiter.Stop()
+
 	for i := 1; i <= numPages; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
+
+			<-rateLimiter.C
 
 			url := fmt.Sprintf("https://www.examtopics.com/discussions/%s/%d", providerName, i)
 			results <- getLinksFromPage(url, grepStr)
@@ -87,6 +93,9 @@ func GetAllPages(providerName string, grepStr string) []models.QuestionData {
 	sem := make(chan struct{}, constants.MaxConcurrentRequests)
 	results := make([]*models.QuestionData, len(sortedLinks))
 
+	rateLimiter := utils.CreateRateLimiter(constants.RequestsPerSecond)
+	defer rateLimiter.Stop()
+
 	for i, link := range sortedLinks {
 		wg.Add(1)
 		url := utils.AddToBaseUrl(link)
@@ -95,6 +104,8 @@ func GetAllPages(providerName string, grepStr string) []models.QuestionData {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
+
+			<-rateLimiter.C
 
 			data := getDataFromLink(url)
 			if data != nil {
