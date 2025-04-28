@@ -169,3 +169,17 @@ func GetNameFromLink(link string) string {
 	name = strings.ReplaceAll(name, "-", " ")
 	return strings.Join(strings.Fields(name), " ")
 }
+
+func SortQuestionDataByPageNumber(data []models.QuestionData) []models.QuestionData {
+	sortedData := make([]models.QuestionData, len(data))
+	copy(sortedData, data)
+
+	sort.Slice(sortedData, func(i, j int) bool {
+		pageNumI := ExtractNumberFromPath(sortedData[i].Title)
+		pageNumJ := ExtractNumberFromPath(sortedData[j].Title)
+
+		return pageNumI < pageNumJ
+	})
+
+	return sortedData
+}

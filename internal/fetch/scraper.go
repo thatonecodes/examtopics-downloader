@@ -102,9 +102,9 @@ func getJSONFromLink(link string) []*models.QuestionData {
 
 		questions = append(questions, &models.QuestionData{
 			Title:        "Examtopics " + strings.ReplaceAll(name, ".json?ref=main", "") + " question #" + strconv.Itoa(counter),
-			Header:       choicesHeader,
+			Header:       q.QuestionText,
 			Content:      strings.Join(q.QuestionImages, "\n"),
-			Questions:    []string{q.QuestionText},
+			Questions:    []string{choicesHeader},
 			Answer:       q.Answer,
 			Timestamp:    q.Timestamp,
 			QuestionLink: q.URL,

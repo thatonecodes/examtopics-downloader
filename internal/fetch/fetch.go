@@ -132,7 +132,8 @@ func getLinksFromPage(url string, grepStr string) []string {
 }
 
 func FetchCachedLinks(providerName string, grepStr string, token string) []string {
-	baseURL := fmt.Sprintf("https://api.github.com/repos/thatonecodes/examtopics-data/contents/%s", utils.CapitalizeFirstLetter(providerName))
+	parsedProviderName := utils.CapitalizeFirstLetter(strings.ToLower(providerName))
+	baseURL := fmt.Sprintf("https://api.github.com/repos/thatonecodes/examtopics-data/contents/%s", parsedProviderName)
 	if token != "" {
 		client = utils.NewGitHubClient(token)
 	}
@@ -196,5 +197,5 @@ func GetCachedPages(providerName string, grepStr string, token string) []models.
 		allData = append(allData, data)
 	}
 
-	return allData
+	return utils.SortQuestionDataByPageNumber(allData)
 }
