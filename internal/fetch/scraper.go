@@ -14,6 +14,7 @@ import (
 	"examtopics-downloader/internal/utils"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/cheggaaa/pb/v3"
 )
 
 func getDataFromLink(link string) *models.QuestionData {
@@ -119,6 +120,8 @@ func fetchAllPageLinksConcurrently(providerName, grepStr string, numPages, concu
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, concurrency)
 	results := make(chan []string, numPages)
+	bar := pb.StartNew(numPages)
+	startTime := utils.StartTime()
 
 	rateLimiter := utils.CreateRateLimiter(constants.RequestsPerSecond)
 	defer rateLimiter.Stop()
@@ -134,6 +137,7 @@ func fetchAllPageLinksConcurrently(providerName, grepStr string, numPages, concu
 
 			url := fmt.Sprintf("https://www.examtopics.com/discussions/%s/%d", providerName, i)
 			results <- getLinksFromPage(url, grepStr)
+			bar.Increment()
 		}(i)
 	}
 
@@ -146,6 +150,9 @@ func fetchAllPageLinksConcurrently(providerName, grepStr string, numPages, concu
 	for res := range results {
 		all = append(all, res...)
 	}
+
+	bar.Finish()
+	fmt.Printf("Scraping completed in %s.\n", utils.TimeSince(startTime))
 	return all
 }
 
@@ -153,6 +160,7 @@ func fetchAllPageLinksConcurrently(providerName, grepStr string, numPages, concu
 func GetAllPages(providerName string, grepStr string) []models.QuestionData {
 	baseURL := fmt.Sprintf("https://www.examtopics.com/discussions/%s/", providerName)
 	numPages := getMaxNumPages(baseURL)
+	fmt.Printf("Fetching %d pages for provider '%s'\n", numPages, providerName)
 
 	allLinks := fetchAllPageLinksConcurrently(providerName, grepStr, numPages, constants.MaxConcurrentRequests)
 
@@ -164,6 +172,8 @@ func GetAllPages(providerName string, grepStr string) []models.QuestionData {
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, constants.MaxConcurrentRequests)
 	results := make([]*models.QuestionData, len(sortedLinks))
+	startTime := utils.StartTime()
+	bar := pb.StartNew(len(sortedLinks))
 
 	rateLimiter := utils.CreateRateLimiter(constants.RequestsPerSecond)
 	defer rateLimiter.Stop()
@@ -183,11 +193,12 @@ func GetAllPages(providerName string, grepStr string) []models.QuestionData {
 			if data != nil {
 				results[i] = data
 			}
+			bar.Increment()
 		}(i, url)
 	}
 
 	wg.Wait()
-
+	bar.Finish()
 	// Filter out nil entries
 	var finalData []models.QuestionData
 	for _, entry := range results {
@@ -195,6 +206,8 @@ func GetAllPages(providerName string, grepStr string) []models.QuestionData {
 			finalData = append(finalData, *entry)
 		}
 	}
+
+	fmt.Printf("Scraping completed in %s.\n", utils.TimeSince(startTime))
 
 	return finalData
 }

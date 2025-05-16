@@ -74,11 +74,31 @@ func SortLinksByQuestionNumber(links []string) []string {
 			return 0
 		}
 		numStr := strings.TrimSuffix(parts[1], "/")
+		numStr = strings.TrimSuffix(numStr, "-discussion")
 		num, _ := strconv.Atoi(numStr)
 		return num
 	}
 
+	extractTopicNum := func(url string) int {
+		parts := strings.Split(url, "topic-")
+		if len(parts) < 2 {
+			return 0
+		}
+		subParts := strings.Split(parts[1], "-")
+		if len(subParts) < 1 {
+			return 0
+		}
+		num, _ := strconv.Atoi(subParts[0])
+		return num
+	}
+
 	sort.Slice(links, func(i, j int) bool {
+		topicI := extractTopicNum(links[i])
+		topicJ := extractTopicNum(links[j])
+
+		if topicI != topicJ {
+			return topicI < topicJ
+		}
 		return extractQuestionNum(links[i]) < extractQuestionNum(links[j])
 	})
 	return links
@@ -182,4 +202,24 @@ func SortQuestionDataByPageNumber(data []models.QuestionData) []models.QuestionD
 	})
 
 	return sortedData
+}
+
+func StartTime() time.Time {
+	return time.Now()
+}
+
+func TimeSince(startTime time.Time) string {
+	duration := time.Since(startTime)
+
+	hours := int(duration.Hours())
+	minutes := int(duration.Minutes()) % 60
+	seconds := int(duration.Seconds()) % 60
+
+	if hours > 0 {
+		return fmt.Sprintf("%dh%dm%ds", hours, minutes, seconds)
+	}
+	if minutes > 0 {
+		return fmt.Sprintf("%dm%ds", minutes, seconds)
+	}
+	return fmt.Sprintf("%ds", seconds)
 }

@@ -36,7 +36,7 @@ func main() {
 
 	if !*noCache {
 		links := fetch.GetCachedPages(*provider, *grepStr, *token)
-		if links != nil {
+		if len(links) > 0 {
 			utils.WriteData(links, *outputPath, *commentBool)
 			fmt.Printf("Successfully saved cached output to %s.\n", *outputPath)
 			os.Exit(0)
