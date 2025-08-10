@@ -155,7 +155,7 @@ func FetchCachedLinks(providerName string, grepStr string, token string) []strin
 	for _, item := range content {
 		link := item.URL
 		number := utils.ExtractNumberFromPath(item.Name)
-		if utils.GrepString(link, grepStr) {
+		if utils.GrepStringFromCache(link, grepStr) {
 			linksWithNumbers = append(linksWithNumbers, models.FileInfo{
 				URL:    link,
 				Name:   item.Name,
