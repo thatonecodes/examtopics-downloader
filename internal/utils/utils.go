@@ -104,10 +104,34 @@ func SortLinksByQuestionNumber(links []string) []string {
 	return links
 }
 
+func normalize(s string) string {
+	s = strings.ToLower(s)
+
+	// Replace multiple dashes with a single dash
+	reDash := regexp.MustCompile(`-+`)
+	s = reDash.ReplaceAllString(s, "-")
+
+	// Remove suffix like _xxx.json (if any)
+	reSuffix := regexp.MustCompile(`(_\d+)?\.json$`)
+	s = reSuffix.ReplaceAllString(s, "")
+
+	return s
+}
+
 func GrepString(baseString, searchString string) bool {
 	return strings.Contains(
 		strings.ToLower(baseString),
 		strings.ToLower(searchString),
+	)
+}
+
+func GrepStringFromCache(baseString, searchString string) bool {
+	baseNorm := normalize(baseString)
+	searchNorm := normalize(searchString)
+
+	return strings.Contains(
+		baseNorm,
+		searchNorm,
 	)
 }
 

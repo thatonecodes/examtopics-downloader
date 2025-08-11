@@ -60,7 +60,7 @@ func WriteData(dataList []models.QuestionData, outputPath string, commentBool bo
 func SaveLinks(filename string, links []models.QuestionData) {
 	var fullLinks []string
 	for _, link := range links {
-		fullLinks = append(fullLinks, AddToBaseUrl(link.QuestionLink))
+		fullLinks = append(fullLinks, link.QuestionLink)
 	}
 	writeFile(filename, fullLinks)
 }
