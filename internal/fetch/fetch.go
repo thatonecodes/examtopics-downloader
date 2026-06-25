@@ -640,10 +640,19 @@ func extractExamSlugFromDiscussionURL(link string) string {
 }
 
 func getDiscussionLinksFromPage(url string) []string {
+	links, _ := getDiscussionLinksFromPageWithStatus(url)
+	return links
+}
+
+// getDiscussionLinksFromPageWithStatus is getDiscussionLinksFromPage but also
+// reports whether the page was fetched successfully. The ok flag lets callers
+// distinguish "fetched, no links here" from "fetch failed" so transient
+// failures can be retried instead of silently dropping ~10 questions per page.
+func getDiscussionLinksFromPageWithStatus(url string) (links []string, ok bool) {
 	doc, err := ParseHTML(url, *client)
 	if err != nil {
 		debugf("failed to parse HTML for %s: %v", url, err)
-		return nil
+		return nil, false
 	}
 
 	seen := map[string]struct{}{}
@@ -665,7 +674,7 @@ func getDiscussionLinksFromPage(url string) []string {
 		out = append(out, clean)
 	})
 
-	return out
+	return out, true
 }
 
 func normalizeDiscussionViewHref(rawHref string) string {
@@ -744,12 +753,22 @@ func matchesExamSelection(providerName, selectedExam, link string) bool {
 
 // Extracts matching links from a single page.
 func getLinksFromPage(providerName, url, selectedExam string) []string {
-	var matchingLinks []string
-	for _, href := range getDiscussionLinksFromPage(url) {
+	links, _ := getLinksFromPageWithStatus(providerName, url, selectedExam)
+	return links
+}
+
+// getLinksFromPageWithStatus is getLinksFromPage but also reports whether the
+// underlying listing page was fetched successfully, so the fan-out can retry
+// pages that failed rather than silently losing their questions.
+func getLinksFromPageWithStatus(providerName, url, selectedExam string) (links []string, ok bool) {
+	hrefs, ok := getDiscussionLinksFromPageWithStatus(url)
+	if !ok {
+		return nil, false
+	}
+	for _, href := range hrefs {
 		if matchesExamSelection(providerName, selectedExam, href) {
-			matchingLinks = append(matchingLinks, href)
+			links = append(links, href)
 		}
 	}
-
-	return matchingLinks
+	return links, true
 }

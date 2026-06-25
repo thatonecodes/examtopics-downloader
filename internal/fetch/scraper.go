@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"encoding/json"
 	"fmt"
 	"html"
 	"net/url"
@@ -62,6 +63,19 @@ func getDataFromLink(link string, solutions map[string]*models.AnswerSolution) *
 			// Avoid the literal word "Answer" in the prefix so a naive
 			// \b([A-F])\b extraction downstream can't match the "A".
 			answer = "Correct: " + strings.Join(letters, "")
+		}
+	}
+
+	// Last-resort fallback: the community "Most Voted" answer. Every
+	// discussion page embeds the vote tally as JSON in a hidden
+	// .voted-answers-tally <script>; this is the same data behind the green
+	// "Most Voted" badges. It's community-sourced rather than the official
+	// suggested answer, so we only use it when neither .correct-answer nor the
+	// correct-hidden markup yielded anything — otherwise the page would have
+	// no answer at all and the quiz would default to a bogus first option.
+	if answer == "" {
+		if voted := extractMostVotedAnswer(doc); voted != "" {
+			answer = "Correct: " + voted
 		}
 	}
 
@@ -331,6 +345,66 @@ func firstURLFromSrcset(srcset string) string {
 	return parts[0]
 }
 
+// votedAnswerEntry mirrors the JSON ExamTopics embeds in the hidden
+// .voted-answers-tally <script> on every discussion page, e.g.
+//
+//	[{"voted_answers": "DE", "vote_count": 3, "is_most_voted": true}]
+type votedAnswerEntry struct {
+	VotedAnswers string `json:"voted_answers"`
+	VoteCount    int    `json:"vote_count"`
+	IsMostVoted  bool   `json:"is_most_voted"`
+}
+
+var votedAnswerLetterPattern = regexp.MustCompile(`(?i)[A-F]`)
+
+// extractMostVotedAnswer returns the community most-voted answer letters (e.g.
+// "AC") for the question, derived from the .voted-answers-tally JSON. It prefers
+// the entry flagged is_most_voted; failing that, the entry with the highest
+// vote_count. Returns "" when no usable letter answer is present (image-only
+// votes, empty tally, or malformed JSON).
+func extractMostVotedAnswer(doc *goquery.Document) string {
+	// Scope to the question body so we never pick up an unrelated tally.
+	sel := doc.Find(".question-body .voted-answers-tally script")
+	if sel.Length() == 0 {
+		sel = doc.Find(".voted-answers-tally script")
+	}
+
+	best := ""
+	bestVotes := -1
+	bestMostVoted := false
+
+	sel.EachWithBreak(func(_ int, s *goquery.Selection) bool {
+		raw := strings.TrimSpace(s.Text())
+		if raw == "" {
+			return true
+		}
+		var entries []votedAnswerEntry
+		if err := json.Unmarshal([]byte(raw), &entries); err != nil {
+			debugf("voted-answers-tally: unmarshal failed: %v", err)
+			return true
+		}
+		for _, e := range entries {
+			letters := strings.ToUpper(strings.Join(votedAnswerLetterPattern.FindAllString(e.VotedAnswers, -1), ""))
+			if letters == "" {
+				continue
+			}
+			// An explicit is_most_voted flag wins outright.
+			if e.IsMostVoted {
+				best = letters
+				bestMostVoted = true
+				return false
+			}
+			if !bestMostVoted && e.VoteCount > bestVotes {
+				best = letters
+				bestVotes = e.VoteCount
+			}
+		}
+		return true
+	})
+
+	return best
+}
+
 var commentAnswerLetterPattern = regexp.MustCompile(`\b([A-F])\b`)
 
 func extractDiscussionComments(doc *goquery.Document) []models.CommentData {
@@ -387,10 +461,17 @@ func normalizeCommentText(raw string) string {
 	return strings.Join(cleaned, "\n")
 }
 
+func listingPageURL(providerName string, page int) string {
+	return fmt.Sprintf("https://www.examtopics.com/discussions/%s/%d", providerName, page)
+}
+
 func fetchAllPageLinksConcurrently(providerName, selectedExam string, numPages, concurrency int, onPageProcessed func()) []string {
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, concurrency)
-	results := make(chan []string, numPages)
+
+	pageResults := make([][]string, numPages+1) // 1-indexed by page number
+	var failedMu sync.Mutex
+	var failedPages []int
 
 	for i := 1; i <= numPages; i++ {
 		wg.Add(1)
@@ -401,23 +482,51 @@ func fetchAllPageLinksConcurrently(providerName, selectedExam string, numPages, 
 
 			requestLimiter.Wait()
 
-			url := fmt.Sprintf("https://www.examtopics.com/discussions/%s/%d", providerName, i)
-			results <- getLinksFromPage(providerName, url, selectedExam)
+			links, ok := getLinksFromPageWithStatus(providerName, listingPageURL(providerName, i), selectedExam)
+			if ok {
+				pageResults[i] = links
+			} else {
+				// Don't silently drop ~10 questions per failed listing page —
+				// record it for the sequential retry pass below.
+				failedMu.Lock()
+				failedPages = append(failedPages, i)
+				failedMu.Unlock()
+			}
 			if onPageProcessed != nil {
 				onPageProcessed()
 			}
 		}(i)
 	}
 
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
+	wg.Wait()
+
+	// Retry listing pages that failed on the first pass, sequentially and under
+	// slow pacing — most failures are transient rate-limiting/anti-bot hiccups
+	// that recover when we stop hammering the server.
+	if len(failedPages) > 0 {
+		sort.Ints(failedPages)
+		fmt.Fprintf(os.Stderr, "[INFO] %d listing page(s) failed on first pass; retrying sequentially...\n", len(failedPages))
+		retryLimiter := utils.CreateRateLimiter(1.0)
+		defer retryLimiter.Stop()
+
+		var stillFailed []int
+		for _, i := range failedPages {
+			<-retryLimiter.C
+			if links, ok := getLinksFromPageWithStatus(providerName, listingPageURL(providerName, i), selectedExam); ok {
+				pageResults[i] = links
+			} else {
+				stillFailed = append(stillFailed, i)
+			}
+		}
+		if len(stillFailed) > 0 {
+			fmt.Fprintf(os.Stderr, "[WARN] %d listing page(s) could not be fetched after retry; some questions may be missing: %v\n", len(stillFailed), stillFailed)
+		}
+	}
 
 	// about 10 questions per examtopics page, we can preallocate
 	all := make([]string, 0, numPages*10)
-	for res := range results {
-		all = append(all, res...)
+	for i := 1; i <= numPages; i++ {
+		all = append(all, pageResults[i]...)
 	}
 
 	return all

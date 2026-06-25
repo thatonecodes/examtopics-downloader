@@ -1070,10 +1070,12 @@ func extractCorrectAnswers(raw string, options []answerOption) []string {
 	if len(ordered) > 0 {
 		return ordered
 	}
-	if len(options) > 0 {
-		return []string{options[0].Letter}
-	}
-	return []string{"A"}
+	// No answer could be determined from the suggested-answer markup, the
+	// community vote tally, or text matching. Return nothing rather than
+	// guessing the first option: a confident-but-wrong "A" is worse than an
+	// honestly-empty answer (the card renders with no pre-marked correct
+	// option, exactly like image-only HOTSPOT questions).
+	return nil
 }
 
 func normalizeForComparison(text string) string {
